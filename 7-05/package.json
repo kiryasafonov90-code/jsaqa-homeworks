@@ -1,0 +1,15 @@
+{
+  "name": "jsaqa-homework-7-05",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Puppeteer and Cucumber BDD tests for cinema ticket booking",
+  "scripts": {
+    "test": "cucumber-js",
+    "test:smoke": "cucumber-js --tags @smoke",
+    "test:headed": "HEADLESS=false cucumber-js"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^11.3.0",
+    "puppeteer": "^24.10.0"
+  }
+}
