@@ -4,9 +4,11 @@
   "private": true,
   "description": "Puppeteer and Cucumber BDD tests for cinema ticket booking",
   "scripts": {
-    "test": "cucumber-js",
+    "test": "node --test tests/*.test.js",
+    "test:bdd": "cucumber-js",
     "test:smoke": "cucumber-js --tags @smoke",
-    "test:headed": "HEADLESS=false cucumber-js"
+    "test:headed": "HEADLESS=false cucumber-js",
+    "test:bdd:dry-run": "cucumber-js --dry-run --format progress"
   },
   "devDependencies": {
     "@cucumber/cucumber": "^11.3.0",

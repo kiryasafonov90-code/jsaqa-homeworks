@@ -7,7 +7,11 @@ Given('открыта страница расписания кинотеатра
 });
 
 When('выбран ближайший сеанс со свободными местами', async function () {
-  await this.cinema.openFirstAvailableSession();
+  await this.cinema.openFirstAvailableSession({ requiredSeats: 2 });
+});
+
+When('выбран сеанс с занятыми местами', async function () {
+  await this.cinema.openFirstAvailableSession({ requiredSeats: 0, requireTaken: true });
 });
 
 When('выбрано {int} свободное место', async function (count) {
@@ -26,12 +30,17 @@ Then('отображается страница подтверждения бр�
   assert.equal(await this.cinema.isBookingPage(), true, 'Не открылась страница подтверждения заказа');
 });
 
-Then('в заказе указано {int} место', async function (count) {
-  assert.equal(await this.cinema.getSelectedSeatCount(), count, 'Количество мест в заказе не совпадает');
-});
+async function verifySeatCount(count) {
+  assert.equal(await this.cinema.getSelectedSeatCount(), count, 'Неверное количество мест в заказе');
+}
+
+Then('в заказе указано {int} место', verifySeatCount);
+Then('в заказе указано {int} места', verifySeatCount);
 
 Then('занятое место нельзя выбрать', async function () {
-  assert.equal(await this.cinema.hasUnavailableSeat(), true, 'На схеме нет занятого места для негативной проверки');
-  assert.equal(await this.cinema.unavailableSeatIsNotSelectable(), true,
-    'Занятое место доступно для выбора или кнопка подтверждения активна');
+  assert.equal(
+    await this.cinema.unavailableSeatIsNotSelectable(),
+    true,
+    'Занятое место было выбрано или кнопка подтверждения активировалась'
+  );
 });
