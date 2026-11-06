@@ -30,9 +30,12 @@ Then('отображается страница подтверждения бр�
   assert.equal(await this.cinema.isBookingPage(), true, 'Не открылась страница подтверждения заказа');
 });
 
-Then('в заказе указано {int} место', async function (count) {
+async function verifySeatCount(count) {
   assert.equal(await this.cinema.getSelectedSeatCount(), count, 'Неверное количество мест в заказе');
-});
+}
+
+Then('в заказе указано {int} место', verifySeatCount);
+Then('в заказе указано {int} места', verifySeatCount);
 
 Then('занятое место нельзя выбрать', async function () {
   assert.equal(
