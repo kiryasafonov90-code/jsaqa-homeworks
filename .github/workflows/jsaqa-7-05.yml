@@ -10,6 +10,12 @@ on:
       - "7-05/**"
       - ".github/workflows/jsaqa-7-05.yml"
   workflow_dispatch:
+    inputs:
+      live:
+        description: "Also run on live qamid.tmweb.ru (requires website access)"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   test:
@@ -28,7 +34,13 @@ jobs:
         run: npm install
       - name: Install Chrome for Puppeteer
         run: npx puppeteer browsers install chrome
-      - name: Run Puppeteer and Cucumber tests twice
+      - name: Run both suites twice on local fixture with 12 occupied seats
+        env:
+          BASE_URL: http://127.0.0.1:8765/index.html
         run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures >/tmp/cinema-test-server.log 2>&1 &
           npm test
           npm test
+      - name: Run live cinema tests (opt-in)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.live }}
+        run: npm test

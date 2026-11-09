@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Локальный стенд кинотеатра</title>
+  <style>
+    .page-nav__day, .movie-seances__time { display: inline-block; padding: 8px; }
+    .buying-scheme__chair { display: inline-block; width: 24px; height: 24px; margin: 4px; background: #ddd; cursor: pointer; }
+    .buying-scheme__chair_taken { background: #333; cursor: not-allowed; }
+    .buying-scheme__chair_selected { background: #8c8; }
+  </style>
+</head>
+<body>
+  <nav class="page-nav">
+    <a href="#" class="page-nav__day page-nav__day_chosen">1</a>
+    <a href="#" class="page-nav__day">2</a>
+    <a href="#" class="page-nav__day">3</a>
+  </nav>
+  <section class="movie">
+    <a href="#" class="movie-seances__time">10:00</a>
+    <a href="#" class="movie-seances__time">12:00</a>
+  </section>
+  <div id="hall" hidden>
+    <div class="buying-scheme"></div>
+    <button class="acceptin-button" disabled>Забронировать</button>
+  </div>
+  <div id="ticket" hidden><span class="ticket__chairs"></span></div>
+  <script>
+    const hall = document.getElementById('hall');
+    const scheme = document.querySelector('.buying-scheme');
+    const button = document.querySelector('.acceptin-button');
+
+    document.querySelectorAll('.page-nav__day').forEach(day => {
+      day.addEventListener('click', event => {
+        event.preventDefault();
+        document.querySelector('.page-nav__day_chosen').classList.remove('page-nav__day_chosen');
+        day.classList.add('page-nav__day_chosen');
+      });
+    });
+
+    document.querySelectorAll('.movie-seances__time').forEach(session => {
+      session.addEventListener('click', event => {
+        event.preventDefault();
+        hall.hidden = false;
+        scheme.textContent = '';
+        button.disabled = true;
+        for (let i = 1; i <= 40; i++) {
+          const chair = document.createElement('span');
+          chair.className = 'buying-scheme__chair buying-scheme__chair_' + (i <= 12 ? 'taken' : 'standart');
+          chair.dataset.seat = '1/' + i;
+          chair.addEventListener('click', () => {
+            if (chair.classList.contains('buying-scheme__chair_taken')) return;
+            chair.classList.toggle('buying-scheme__chair_selected');
+            button.disabled = !document.querySelector('.buying-scheme__chair_selected');
+          });
+          scheme.appendChild(chair);
+        }
+      });
+    });
+
+    button.addEventListener('click', () => {
+      document.querySelector('.ticket__chairs').textContent = Array.from(
+        document.querySelectorAll('.buying-scheme__chair_selected'),
+        chair => chair.dataset.seat
+      ).join(', ');
+      document.getElementById('ticket').hidden = false;
+    });
+  </script>
+</body>
+</html>
