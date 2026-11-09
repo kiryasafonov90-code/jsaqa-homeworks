@@ -4,7 +4,9 @@
   "private": true,
   "description": "Puppeteer and Cucumber BDD tests for cinema ticket booking",
   "scripts": {
-    "test": "cucumber-js",
+    "test": "npm run test:puppeteer && npm run test:bdd",
+    "test:puppeteer": "node --test tests/*.test.js",
+    "test:bdd": "cucumber-js",
     "test:smoke": "cucumber-js --tags @smoke",
     "test:headed": "HEADLESS=false cucumber-js"
   },
