@@ -28,5 +28,7 @@ jobs:
         run: npm install
       - name: Install Chrome for Puppeteer
         run: npx puppeteer browsers install chrome
-      - name: Run Puppeteer and Cucumber tests
-        run: npm test
+      - name: Run Puppeteer and Cucumber tests twice
+        run: |
+          npm test
+          npm test

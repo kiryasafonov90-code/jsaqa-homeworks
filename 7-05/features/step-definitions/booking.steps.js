@@ -1,41 +1,24 @@
 const { Given, When, Then } = require('@cucumber/cucumber');
-const { strict: assert } = require('node:assert');
+const assert = require('node:assert/strict');
+const { openSession, selectSeats, showBooking, ticketSeatCount, bookingDisabled } = require('../../src/cinema');
 
-Given('открыта страница расписания кинотеатра', async function () {
-  await this.cinema.open();
-  await this.cinema.waitForSchedule();
+Given('открыт день {int} и сеанс {int}', async function (day, session) {
+  await openSession(this.page, day, session);
 });
 
-When('выбран ближайший сеанс со свободными местами', async function () {
-  await this.cinema.openFirstAvailableSession();
+When('выбираю свободных мест: {int}', async function (count) {
+  await selectSeats(this.page, count);
 });
 
-When('выбрано {int} свободное место', async function (count) {
-  await this.cinema.selectAvailableSeats(count);
+When('перехожу к подтверждению', async function () {
+  await showBooking(this.page);
 });
 
-When('выбрано {int} свободных места', async function (count) {
-  await this.cinema.selectAvailableSeats(count);
+Then('в билете указано мест: {int}', async function (count) {
+  assert.equal(await ticketSeatCount(this.page), count);
 });
 
-When('подтвержден выбор мест', async function () {
-  await this.cinema.confirmSeats();
+Then('кнопка бронирования неактивна', async function () {
+  assert.equal(await bookingDisabled(this.page), true);
 });
 
-Then('отображается страница подтверждения бронирования', async function () {
-  assert.equal(await this.cinema.isBookingPage(), true, 'Не открылась страница подтверждения заказа');
-});
-
-Then('в заказе указано {int} место', async function (count) {
-  assert.equal(await this.cinema.getSelectedSeatCount(), count, 'Количество мест в заказе не совпадает');
-});
-
-Then('в заказе указано {int} места', async function (count) {
-  assert.equal(await this.cinema.getSelectedSeatCount(), count, 'Количество мест в заказе не совпадает');
-});
-
-Then('занятое место нельзя выбрать', async function () {
-  assert.equal(await this.cinema.hasUnavailableSeat(), true, 'На схеме нет занятого места для негативной проверки');
-  assert.equal(await this.cinema.unavailableSeatIsNotSelectable(), true,
-    'Занятое место доступно для выбора или кнопка подтверждения активна');
-});

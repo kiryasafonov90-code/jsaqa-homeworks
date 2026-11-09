@@ -1,70 +1,34 @@
 # Домашнее задание 7.5 — Puppeteer 2
 
-Автотесты бронирования билетов для учебного приложения «Идём в кино». Первое задание реализовано отдельным тест-сьютом на встроенном Node.js Test Runner и Puppeteer, второе — BDD-сценариями на Cucumber.
-
-## Требования
-
-- Node.js 20 или новее.
-- Установленный браузер Chrome для Puppeteer.
+Три теста бронирования кинотеатра: два позитивных и один негативный. Задание 1 написано на Jest + Puppeteer; задание 2 — на Cucumber + Puppeteer. Общие короткие команды вынесены в src/cinema.js.
 
 ## Установка и запуск
 
-```bash
-npm install
-npx puppeteer browsers install chrome
-npm test
-```
+Требуется Node.js 20+.
 
-Команда `npm test` запускает оба набора: три самостоятельных тест-кейса Puppeteer и сценарии Cucumber.
+Установка: перейдите в каталог 7-05 и выполните npm install.
 
-Отдельный запуск:
+Запуск обоих наборов: npm test. Для повторной проверки запустите npm test ещё раз.
 
-```bash
-npm run test:puppeteer
-npm run test:bdd
-```
+Отдельные команды: npm run test:puppeteer и npm run test:bdd.
 
-По умолчанию используется учебный стенд `https://qamid.tmweb.ru/client/index.php`. Для другого адреса задайте `BASE_URL`.
+По умолчанию используется стенд http://qamid.tmweb.ru/client/index.php. Адрес можно переопределить через BASE_URL. Путь к локальному Chrome — через CHROME_PATH.
 
-PowerShell:
+## Сценарии
 
-```powershell
-$env:BASE_URL="https://qamid.tmweb.ru/client/index.php"
-npm test
-```
+1. Выбрать одно свободное место и увидеть одно место в предварительном билете.
+2. Выбрать два свободных места и увидеть два места в предварительном билете.
+3. Без выбора мест кнопка бронирования остаётся недоступной.
 
-macOS / Linux:
+В обоих заданиях день и сеанс указаны явно: день 2 (завтра) и сеанс 1 (первый в списке выбранного дня), отсчёт с единицы. Если расписание стенда поменялось, измените DAY и SESSION в tests/booking.test.js и соответствующие числа в features/booking.feature.
 
-```bash
-BASE_URL="https://qamid.tmweb.ru/client/index.php" npm test
-```
-
-Чтобы открыть браузер в видимом режиме:
-
-```bash
-# PowerShell
-$env:HEADLESS="false"; npm test
-
-# macOS / Linux
-HEADLESS=false npm test
-```
-
-## Тест-кейсы первого задания
-
-1. Happy path: выбрать одно свободное место, подтвердить заказ и проверить страницу билета и количество мест.
-2. Happy path: выбрать два свободных места, подтвердить заказ и проверить страницу билета и количество мест.
-3. Sad path: проверить, что занятое место нельзя выбрать и оно не активирует подтверждение заказа.
-
-Файл тест-сьюта: `tests/booking.test.js`.
-
-## BDD второго задания
-
-Файл `features/booking.feature` содержит те же три сценария на русском языке. Все шаги реализованы в `features/step-definitions/booking.steps.js`, включая отдельное выражение для проверки одного и двух мест. Hooks браузера находятся в `features/support/hooks.js`.
+Тесты выбирают свободные кресла, даже если в зале уже есть занятые. Они доходят только до предварительного подтверждения и не нажимают «Получить код бронирования», поэтому повторный запуск не занимает места.
 
 ## Структура
 
-- `tests/booking.test.js` — три тест-кейса первого задания.
-- `features/booking.feature` — BDD-сценарии.
-- `features/step-definitions/booking.steps.js` — определения шагов Cucumber.
-- `src/pages/cinema.page.js` — Page Object и custom commands.
-- `features/support/hooks.js` — browser/page hooks.
+- tests/booking.test.js — три теста Jest.
+- features/booking.feature — три BDD-сценария.
+- features/step-definitions/booking.steps.js — шаги Cucumber.
+- features/support/hooks.js — открытие и закрытие браузера.
+- src/cinema.js — общие действия с расписанием, местами и билетом.
+

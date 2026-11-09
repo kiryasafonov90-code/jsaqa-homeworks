@@ -1,50 +1,26 @@
-const { test, beforeEach, afterEach } = require('node:test');
-const assert = require('node:assert/strict');
-const puppeteer = require('puppeteer');
-const CinemaPage = require('../src/pages/cinema.page');
+const { openSession, selectSeats, showBooking, ticketSeatCount, bookingDisabled } = require('../src/cinema');
 
-let browser;
-let page;
-let cinema;
+// Завтрашний день, первый сеанс; при необходимости индексы можно поменять.
+const DAY = 2;
+const SESSION = 1;
 
 beforeEach(async () => {
-  browser = await puppeteer.launch({
-    headless: process.env.HEADLESS !== 'false',
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
-  page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
-  page.setDefaultTimeout(20000);
-  cinema = new CinemaPage(page);
-  await cinema.open();
-  await cinema.waitForSchedule();
-  await cinema.openFirstAvailableSession();
+  await openSession(page, DAY, SESSION);
 });
 
-afterEach(async () => {
-  if (browser) await browser.close();
+test('Happy path: одно свободное место', async () => {
+  await selectSeats(page, 1);
+  await showBooking(page);
+  expect(await ticketSeatCount(page)).toBe(1);
 });
 
-test('Happy path: бронирование одного свободного места', async () => {
-  await cinema.selectAvailableSeats(1);
-  await cinema.confirmSeats();
-
-  assert.equal(await cinema.isBookingPage(), true);
-  assert.equal(await cinema.getSelectedSeatCount(), 1);
+test('Happy path: два свободных места', async () => {
+  await selectSeats(page, 2);
+  await showBooking(page);
+  expect(await ticketSeatCount(page)).toBe(2);
 });
 
-test('Happy path: бронирование двух свободных мест', async () => {
-  await cinema.selectAvailableSeats(2);
-  await cinema.confirmSeats();
-
-  assert.equal(await cinema.isBookingPage(), true);
-  assert.equal(await cinema.getSelectedSeatCount(), 2);
+test('Sad path: без выбора мест бронирование недоступно', async () => {
+  expect(await bookingDisabled(page)).toBe(true);
 });
 
-test('Sad path: занятое место нельзя выбрать', async () => {
-  assert.equal(await cinema.hasUnavailableSeat(), true, 'На выбранном сеансе нет занятых мест');
-  assert.equal(
-    await cinema.unavailableSeatIsNotSelectable(),
-    true,
-    'Занятое место выбралось или кнопка подтверждения изменила состояние'
-  );
-});
