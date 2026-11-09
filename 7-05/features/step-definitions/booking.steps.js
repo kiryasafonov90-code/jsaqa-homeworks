@@ -30,6 +30,10 @@ Then('в заказе указано {int} место', async function (count) {
   assert.equal(await this.cinema.getSelectedSeatCount(), count, 'Количество мест в заказе не совпадает');
 });
 
+Then('в заказе указано {int} места', async function (count) {
+  assert.equal(await this.cinema.getSelectedSeatCount(), count, 'Количество мест в заказе не совпадает');
+});
+
 Then('занятое место нельзя выбрать', async function () {
   assert.equal(await this.cinema.hasUnavailableSeat(), true, 'На схеме нет занятого места для негативной проверки');
   assert.equal(await this.cinema.unavailableSeatIsNotSelectable(), true,
