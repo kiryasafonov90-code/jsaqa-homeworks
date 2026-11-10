@@ -12,11 +12,10 @@ describe('Задание 1: Puppeteer — бронирование билето�
       headless: process.env.HEADLESS !== 'false',
       args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
+
     const page = await browser.newPage();
     page.setDefaultTimeout(15_000);
     cinema = new CinemaPage(page);
-    await cinema.open();
-    await cinema.waitForSchedule();
   });
 
   afterEach(async () => {
@@ -27,6 +26,7 @@ describe('Задание 1: Puppeteer — бронирование билето�
     await cinema.openFirstAvailableSession({ requiredSeats: 1 });
     await cinema.selectAvailableSeats(1);
     await cinema.confirmSeats();
+
     assert.equal(await cinema.isBookingPage(), true);
     assert.equal(await cinema.getSelectedSeatCount(), 1);
   });
@@ -35,12 +35,17 @@ describe('Задание 1: Puppeteer — бронирование билето�
     await cinema.openFirstAvailableSession({ requiredSeats: 2 });
     await cinema.selectAvailableSeats(2);
     await cinema.confirmSeats();
+
     assert.equal(await cinema.isBookingPage(), true);
     assert.equal(await cinema.getSelectedSeatCount(), 2);
   });
 
   it('sad path: занятое место нельзя выбрать', async () => {
-    await cinema.openFirstAvailableSession({ requiredSeats: 0, requireTaken: true });
+    await cinema.openFirstAvailableSession({
+      requiredSeats: 0,
+      requireTaken: true
+    });
+
     assert.equal(await cinema.unavailableSeatIsNotSelectable(), true);
   });
 });
