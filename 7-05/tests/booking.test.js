@@ -1,26 +1,27 @@
-const { openSession, selectSeats, showBooking, ticketSeatCount, bookingDisabled } = require('../src/cinema');
+const CinemaPage = require('../src/pages/cinema.page');
 
-// Завтрашний день, первый сеанс; при необходимости индексы можно поменять.
 const DAY = 2;
 const SESSION = 1;
 
+let cinema;
+
 beforeEach(async () => {
-  await openSession(page, DAY, SESSION);
+  cinema = new CinemaPage(page);
+  await cinema.openSession(DAY, SESSION);
 });
 
-test('Happy path: одно свободное место', async () => {
-  await selectSeats(page, 1);
-  await showBooking(page);
-  expect(await ticketSeatCount(page)).toBe(1);
+test('Happy path: бронирование одного свободного места', async () => {
+  await cinema.selectSeats(1);
+  await cinema.confirmSeats();
+  expect(await cinema.getTicketSeatCount()).toBe(1);
 });
 
-test('Happy path: два свободных места', async () => {
-  await selectSeats(page, 2);
-  await showBooking(page);
-  expect(await ticketSeatCount(page)).toBe(2);
+test('Happy path: бронирование двух свободных мест', async () => {
+  await cinema.selectSeats(2);
+  await cinema.confirmSeats();
+  expect(await cinema.getTicketSeatCount()).toBe(2);
 });
 
-test('Sad path: без выбора мест бронирование недоступно', async () => {
-  expect(await bookingDisabled(page)).toBe(true);
+test('Sad path: без выбора мест кнопка бронирования неактивна', async () => {
+  expect(await cinema.isBookingButtonDisabled()).toBe(true);
 });
-
