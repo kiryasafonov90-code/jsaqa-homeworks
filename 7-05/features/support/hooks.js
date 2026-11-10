@@ -9,6 +9,7 @@ Before(async function () {
     headless: process.env.HEADLESS !== 'false',
     args: ['--no-sandbox', '--disable-setuid-sandbox']
   });
+
   this.page = await this.browser.newPage();
   this.page.setDefaultTimeout(15_000);
   this.cinema = new CinemaPage(this.page);
