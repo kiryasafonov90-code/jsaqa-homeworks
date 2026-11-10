@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <title>Тестовый стенд кинотеатра</title>
+  <style>
+    body { font: 16px Arial, sans-serif; padding: 24px; }
+    .page-nav__day, .movie-seances__time { display: inline-block; margin: 8px; padding: 10px; }
+    .page-nav__day_chosen { background: #ddd; }
+    .buying-scheme__chair { display: inline-block; width: 26px; height: 26px; margin: 4px; background: #ddd; cursor: pointer; }
+    .buying-scheme__chair_taken { background: #444; cursor: not-allowed; }
+    .buying-scheme__chair_selected { background: #5a5; }
+    .acceptin-button:disabled { opacity: .45; }
+  </style>
+</head>
+<body>
+  <nav>
+    <a href="#" class="page-nav__day page-nav__day_chosen">Сегодня</a>
+    <a href="#" class="page-nav__day">Завтра</a>
+    <a href="#" class="page-nav__day">Послезавтра</a>
+  </nav>
+  <section class="movie">
+    <h2>Тестовый фильм</h2>
+    <a href="#" class="movie-seances__time">10:00</a>
+    <a href="#" class="movie-seances__time">12:00</a>
+  </section>
+  <section id="hall" hidden>
+    <h2>Схема зала</h2>
+    <div class="buying-scheme"></div>
+    <button class="acceptin-button" disabled>Забронировать</button>
+  </section>
+  <section id="ticket" class="ticket" hidden>
+    <h2>Предварительный билет</h2>
+    <div class="ticket__chairs"></div>
+  </section>
+  <script>
+    const hall = document.querySelector('#hall');
+    const scheme = document.querySelector('.buying-scheme');
+    const button = document.querySelector('.acceptin-button');
+    const ticket = document.querySelector('#ticket');
+
+    document.querySelectorAll('.page-nav__day').forEach((day) => {
+      day.addEventListener('click', (event) => {
+        event.preventDefault();
+        document.querySelector('.page-nav__day_chosen').classList.remove('page-nav__day_chosen');
+        day.classList.add('page-nav__day_chosen');
+      });
+    });
+
+    document.querySelectorAll('.movie-seances__time').forEach((session) => {
+      session.addEventListener('click', (event) => {
+        event.preventDefault();
+        hall.hidden = false;
+        scheme.textContent = '';
+        ticket.hidden = true;
+        button.disabled = true;
+
+        for (let number = 1; number <= 40; number += 1) {
+          const chair = document.createElement('button');
+          chair.type = 'button';
+          chair.className = 'buying-scheme__chair ' +
+            (number <= 12 ? 'buying-scheme__chair_taken' : 'buying-scheme__chair_standart');
+          chair.dataset.seat = '1/' + number;
+          chair.addEventListener('click', () => {
+            if (chair.classList.contains('buying-scheme__chair_taken')) return;
+            chair.classList.toggle('buying-scheme__chair_selected');
+            button.disabled = !document.querySelector('.buying-scheme__chair_selected');
+          });
+          scheme.appendChild(chair);
+        }
+      });
+    });
+
+    button.addEventListener('click', () => {
+      ticket.querySelector('.ticket__chairs').textContent = Array.from(
+        document.querySelectorAll('.buying-scheme__chair_selected'),
+        (chair) => chair.dataset.seat
+      ).join(', ');
+      ticket.hidden = false;
+    });
+  </script>
+</body>
+</html>
