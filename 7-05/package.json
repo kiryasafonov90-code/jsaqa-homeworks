@@ -8,7 +8,6 @@
     "test:bdd": "cucumber-js",
     "test:all": "npm test && npm run test:bdd",
     "test:headed": "cross-env HEADLESS=false npm run test:all",
-    "test:smoke": "cucumber-js --tags @smoke",
     "test:bdd:dry-run": "cucumber-js --dry-run --format progress"
   },
   "devDependencies": {
