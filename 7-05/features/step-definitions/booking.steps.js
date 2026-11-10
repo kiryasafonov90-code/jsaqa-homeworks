@@ -1,15 +1,8 @@
-const { When, Then } = require('@cucumber/cucumber');
+const { Given, When, Then } = require('@cucumber/cucumber');
 const assert = require('node:assert/strict');
 
-When('выбран сеанс со свободными местами', async function () {
-  await this.cinema.openFirstAvailableSession({ requiredSeats: 2 });
-});
-
-When('выбран сеанс с занятыми местами', async function () {
-  await this.cinema.openFirstAvailableSession({
-    requiredSeats: 0,
-    requireTaken: true
-  });
+Given('открыт день {int} и сеанс {int}', async function (day, session) {
+  await this.cinema.openSession(day, session);
 });
 
 When('выбрано {int} свободное место', async function (count) {
@@ -24,11 +17,11 @@ When('подтвержден выбор мест', async function () {
   await this.cinema.confirmSeats();
 });
 
-Then('отображается страница подтверждения бронирования', async function () {
+Then('отображается страница подтверждения', async function () {
   assert.equal(
     await this.cinema.isBookingPage(),
     true,
-    'Не открылась страница подтверждения заказа'
+    'Страница подтверждения бронирования не открылась'
   );
 });
 
@@ -36,17 +29,17 @@ async function verifySeatCount(count) {
   assert.equal(
     await this.cinema.getSelectedSeatCount(),
     count,
-    'Неверное количество мест в заказе'
+    'Количество мест в заказе не совпадает с выбранным'
   );
 }
 
 Then('в заказе указано {int} место', verifySeatCount);
 Then('в заказе указано {int} места', verifySeatCount);
 
-Then('занятое место нельзя выбрать', async function () {
+Then('кнопка бронирования неактивна', async function () {
   assert.equal(
-    await this.cinema.unavailableSeatIsNotSelectable(),
+    await this.cinema.isBookingButtonDisabled(),
     true,
-    'Занятое место было выбрано или кнопка подтверждения стала активной'
+    'Кнопка бронирования должна быть неактивна без выбранных мест'
   );
 });
