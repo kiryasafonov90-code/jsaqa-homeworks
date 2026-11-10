@@ -3,7 +3,10 @@ const assert = require('node:assert/strict');
 const puppeteer = require('puppeteer');
 const CinemaPage = require('../src/pages/cinema.page');
 
-describe('Задание 1: Puppeteer — бронирование билетов', { timeout: 120_000 }, () => {
+const DAY = 2;
+const SESSION = 1;
+
+describe('Puppeteer: бронирование билетов', { timeout: 60_000 }, () => {
   let browser;
   let cinema;
 
@@ -16,14 +19,14 @@ describe('Задание 1: Puppeteer — бронирование билето�
     const page = await browser.newPage();
     page.setDefaultTimeout(15_000);
     cinema = new CinemaPage(page);
+    await cinema.openSession(DAY, SESSION);
   });
 
   afterEach(async () => {
     if (browser) await browser.close();
   });
 
-  it('happy path: бронирование одного свободного места', async () => {
-    await cinema.openFirstAvailableSession({ requiredSeats: 1 });
+  it('happy path: бронирование одного места', async () => {
     await cinema.selectAvailableSeats(1);
     await cinema.confirmSeats();
 
@@ -31,8 +34,7 @@ describe('Задание 1: Puppeteer — бронирование билето�
     assert.equal(await cinema.getSelectedSeatCount(), 1);
   });
 
-  it('happy path: бронирование двух свободных мест', async () => {
-    await cinema.openFirstAvailableSession({ requiredSeats: 2 });
+  it('happy path: бронирование двух мест', async () => {
     await cinema.selectAvailableSeats(2);
     await cinema.confirmSeats();
 
@@ -40,12 +42,7 @@ describe('Задание 1: Puppeteer — бронирование билето�
     assert.equal(await cinema.getSelectedSeatCount(), 2);
   });
 
-  it('sad path: занятое место нельзя выбрать', async () => {
-    await cinema.openFirstAvailableSession({
-      requiredSeats: 0,
-      requireTaken: true
-    });
-
-    assert.equal(await cinema.unavailableSeatIsNotSelectable(), true);
+  it('sad path: без выбора мест кнопка бронирования неактивна', async () => {
+    assert.equal(await cinema.isBookingButtonDisabled(), true);
   });
 });
