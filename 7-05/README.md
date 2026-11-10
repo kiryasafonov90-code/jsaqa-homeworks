@@ -1,53 +1,60 @@
 # Домашнее задание 7.5 — Puppeteer 2
 
-Автотесты бронирования билетов в приложении «Идём в кино».
+Автотесты бронирования билетов в учебном приложении «Идём в кино».
 
 ## Установка
 
-Node.js 20+.
+Требуется Node.js 20 или новее.
 
-```bash
+~~~bash
 cd 7-05
 npm install
 npx puppeteer browsers install chrome
-```
+~~~
 
-При необходимости укажите адрес тестового стенда в переменной `BASE_URL` (по умолчанию https://qamid.tmweb.ru/client/index.php).
+По умолчанию используется учебный стенд http://qamid.tmweb.ru/client/index.php.
+Адрес можно изменить через переменную окружения BASE_URL.
 
 ## Задание 1 — Puppeteer
 
-Отдельный тест-сьют `tests/booking.test.js` (Node.js test runner, без Cucumber), 3 теста:
+Команда запуска: npm test
 
-1. Happy path: выбор одного свободного места, переход к подтверждению и проверка одного места.
-2. Happy path: выбор двух свободных мест, переход к подтверждению и проверка двух мест.
-3. Sad path: попытка нажать занятое место, проверка отсутствия выбора и недоступности подтверждения.
+Выполняются три теста:
+1. Happy path: выбор одного свободного места и проверка предварительного билета.
+2. Happy path: выбор двух свободных мест и проверка предварительного билета.
+3. Sad path: попытка выбрать занятое место; проверяется, что оно не выбрано и кнопка подтверждения недоступна.
 
-```bash
-npm test
-```
-
-В тестах используются хуки `beforeEach` / `afterEach`, Page Object и custom commands.
+Для тестов используются хуки beforeEach / afterEach, Page Object и общие команды для выбора сеанса и мест.
 
 ## Задание 2 — Puppeteer + Cucumber
 
-Те же три сценария записаны в `features/booking.feature` и реализованы в `features/step-definitions/booking.steps.js`.
+Команда запуска: npm run test:bdd
 
-```bash
-npm run test:bdd
-npm run test:bdd:dry-run  # проверить сопоставление шагов без запуска браузера
-npm run test:smoke
-```
+Те же три сценария описаны на русском языке в features/booking.feature.
+Шаги находятся в features/step-definitions/booking.steps.js, открытие и закрытие браузера — в features/support/hooks.js.
 
-Для запуска Cucumber в окне браузера используйте `HEADLESS=false npm run test:bdd` (PowerShell: `$env:HEADLESS='false'; npm run test:bdd`).
+## Проверка всех сценариев
+
+Запуск обоих наборов в headless-режиме: npm run test:all
+
+Запуск обоих наборов с видимым браузером: npm run test:headed
+
+Команда test:headed работает в Windows, macOS и Linux. Для неё нужен доступный графический рабочий стол.
+
+Проверка сопоставления шагов Cucumber без запуска браузера: npm run test:bdd:dry-run
+
+## Как устранена проблема устаревших элементов
+
+При переборе сеансов после каждого перехода на расписание заново запрашиваются элементы дня и сеанса. Старые ElementHandle не используются после навигации. При обнаружении подходящего сеанса функция сразу возвращает управление, оставляя страницу на схеме зала.
+
+Места также выбираются по одному через свежий запрос DOM. Это исключает повторное использование ссылок на элементы, которые могли быть перерисованы.
+
+Тесты доходят до предварительного билета и не нажимают кнопку получения кода бронирования.
 
 ## Структура
 
-- `tests/booking.test.js` — задание 1.
-- `features/booking.feature` — BDD-сценарии задания 2.
-- `features/step-definitions/booking.steps.js` — шаги Cucumber.
-- `features/support/hooks.js` — хуки Cucumber.
-- `src/pages/cinema.page.js` — Page Object и общие custom commands.
-
-## Важно
-
-Тесты зависят от доступности стенда и от наличия свободных и занятых мест в его текущих сеансах. Время ожидания задаётся через `page.setDefaultTimeout()`, `page.waitForSelector()` и `page.waitForFunction()`; удалённый из современных Puppeteer метод `page.waitForTimeout()` не используется.
+- tests/booking.test.js — задание 1, три теста Node.js test runner + Puppeteer.
+- features/booking.feature — три BDD-сценария.
+- features/step-definitions/booking.steps.js — шаги Cucumber.
+- features/support/hooks.js — хуки браузера Cucumber.
+- src/pages/cinema.page.js — Page Object и общие команды.
