@@ -3,7 +3,6 @@ module.exports = {
     paths: ['features/**/*.feature'],
     require: ['features/support/**/*.js', 'features/step-definitions/**/*.js'],
     format: ['progress'],
-    publishQuiet: true,
-    timeout: 30000
+    publishQuiet: true
   }
 };
