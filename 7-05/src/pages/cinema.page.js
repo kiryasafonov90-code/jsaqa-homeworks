@@ -1,131 +1,250 @@
 class CinemaPage {
   constructor(page) {
     this.page = page;
-    this.baseUrl = process.env.BASE_URL || 'https://qamid.tmweb.ru/client/index.php';
+    this.baseUrl = process.env.BASE_URL || 'http://qamid.tmweb.ru/client/index.php';
     this.selectors = {
       movie: '.movie',
       day: '.page-nav__day',
       session: '.movie-seances__time',
-      scheme: '.buying-scheme',
       seat: '.buying-scheme__chair',
-      freeSeat: '.buying-scheme__chair_standart:not(.buying-scheme__chair_taken), .buying-scheme__chair_vip:not(.buying-scheme__chair_taken)',
+      freeSeat:
+        '.buying-scheme__chair_standart:not(.buying-scheme__chair_taken):not(.buying-scheme__chair_selected), ' +
+        '.buying-scheme__chair_vip:not(.buying-scheme__chair_taken):not(.buying-scheme__chair_selected)',
       selectedSeat: '.buying-scheme__chair_selected',
       takenSeat: '.buying-scheme__chair_taken',
       confirm: '.acceptin-button',
-      ticket: '.ticket',
+      ticket: '.ticket, #ticket',
       ticketSeats: '.ticket__chairs'
     };
   }
 
   async open() {
     await this.page.goto(this.baseUrl, { waitUntil: 'domcontentloaded' });
+    await this.waitForSchedule();
   }
 
   async waitForSchedule() {
+    await this.page.waitForSelector(this.selectors.day, { visible: true });
     await this.page.waitForSelector(this.selectors.movie, { visible: true });
   }
 
-  // Custom command: находим сеанс с нужным количеством свободных (или с занятым) мест.
-  async openFirstAvailableSession({ requiredSeats = 1, requireTaken = false } = {}) {
-    const days = await this.page.$$(this.selectors.day);
-    for (let dayIndex = 0; dayIndex < days.length; dayIndex++) {
-      await this.open();
-      await this.waitForSchedule();
+  // Каждый поиск сеанса начинает работу с новой страницы.
+  async openDay(dayIndex) {
+    await this.open();
 
-      const day = (await this.page.$$(this.selectors.day))[dayIndex];
-      if (!day) continue;
-      const disabled = await day.evaluate(el => el.classList.contains('page-nav__day_disabled'));
-      if (disabled) continue;
-      await day.click();
-      await this.page.waitForFunction(
-        index => document.querySelectorAll('.page-nav__day')[index]?.classList.contains('page-nav__day_chosen'),
-        {}, dayIndex
+    const days = await this.page.$$(this.selectors.day);
+    const day = days[dayIndex];
+    if (!day) return false;
+
+    const disabled = await day.evaluate((element) =>
+      element.classList.contains('page-nav__day_disabled')
+    );
+    if (disabled) return false;
+
+    await day.click();
+    await this.page.waitForFunction(
+      (selector, index) => {
+        const currentDay = document.querySelectorAll(selector)[index];
+        return Boolean(
+          currentDay && currentDay.classList.contains('page-nav__day_chosen')
+        );
+      },
+      {},
+      this.selectors.day,
+      dayIndex
+    );
+
+    return true;
+  }
+
+  async getVisibleElement(selector, visibleIndex) {
+    const elements = await this.page.$$(selector);
+    let currentIndex = 0;
+
+    for (const element of elements) {
+      const visible = await element.evaluate(
+        (node) => node.getClientRects().length > 0
       );
 
-      const sessions = await this.page.$$(this.selectors.session);
-      for (let sessionIndex = 0; sessionIndex < sessions.length; sessionIndex++) {
-        if (sessionIndex > 0) {
-          await this.open();
-          await this.waitForSchedule();
-          const currentDay = (await this.page.$$(this.selectors.day))[dayIndex];
-          await currentDay.click();
-          await this.page.waitForFunction(
-            index => document.querySelectorAll('.page-nav__day')[index]?.classList.contains('page-nav__day_chosen'),
-            {}, dayIndex
-          );
+      if (!visible) continue;
+      if (currentIndex === visibleIndex) return element;
+      currentIndex += 1;
+    }
+
+    return null;
+  }
+
+  // Custom command: ищет первый сеанс с нужным числом свободных/занятых мест.
+  async openFirstAvailableSession({
+    requiredSeats = 1,
+    requireTaken = false
+  } = {}) {
+    if (!Number.isInteger(requiredSeats) || requiredSeats < 0) {
+      throw new Error('requiredSeats должно быть целым неотрицательным числом');
+    }
+
+    await this.open();
+    const dayCount = await this.page.$$eval(
+      this.selectors.day,
+      (days) => days.length
+    );
+
+    for (let dayIndex = 0; dayIndex < dayCount; dayIndex += 1) {
+      if (!(await this.openDay(dayIndex))) continue;
+
+      const sessionCount = await this.page.$$eval(
+        this.selectors.session,
+        (sessions) =>
+          sessions.filter((session) => session.getClientRects().length > 0).length
+      );
+
+      for (let sessionIndex = 0; sessionIndex < sessionCount; sessionIndex += 1) {
+        // После перезагрузки снова получаем свежие элементы дня и сеанса.
+        if (!(await this.openDay(dayIndex))) break;
+
+        const session = await this.getVisibleElement(
+          this.selectors.session,
+          sessionIndex
+        );
+        if (!session) continue;
+
+        await session.click();
+
+        try {
+          await this.page.waitForSelector(this.selectors.seat, {
+            visible: true,
+            timeout: 10000
+          });
+        } catch (error) {
+          if (error.name === 'TimeoutError') continue;
+          throw error;
         }
 
-        const session = (await this.page.$$(this.selectors.session))[sessionIndex];
-        if (!session) continue;
-        await session.click();
-        try {
-          await this.page.waitForSelector(this.selectors.seat, { visible: true, timeout: 5000 });
-        } catch {
-          continue;
+        const freeCount = await this.page.$$eval(
+          this.selectors.freeSeat,
+          (seats) => seats.length
+        );
+        const takenCount = await this.page.$$eval(
+          this.selectors.takenSeat,
+          (seats) => seats.length
+        );
+
+        if (freeCount >= requiredSeats && (!requireTaken || takenCount > 0)) {
+          return;
         }
-        const free = await this.page.$$(this.selectors.freeSeat);
-        const taken = await this.page.$$(this.selectors.takenSeat);
-        if (free.length >= requiredSeats && (!requireTaken || taken.length > 0)) return;
       }
     }
+
     throw new Error(
-      'Не найден сеанс с нужными местами: свободных требуется ' +
-      requiredSeats + ', занятое обязательно: ' + requireTaken
+      'Не найден подходящий сеанс. Нужно свободных мест: ' +
+      requiredSeats +
+      ', требуется занятое место: ' +
+      requireTaken
     );
   }
 
-  // Custom command: кликаем только по свободным местам и ждём изменения состояния схемы.
+  // Custom command: каждый раз запрашивает свежий свободный элемент кресла.
   async selectAvailableSeats(count) {
-    const seats = await this.page.$$(this.selectors.freeSeat);
-    if (seats.length < count) {
-      throw new Error('Недостаточно свободных мест: ' + seats.length + ' вместо ' + count);
+    if (!Number.isInteger(count) || count < 1) {
+      throw new Error('Количество мест должно быть положительным целым числом');
     }
-    for (const seat of seats.slice(0, count)) await seat.click();
+
+    for (let index = 0; index < count; index += 1) {
+      const seat = await this.page.$(this.selectors.freeSeat);
+      if (!seat) {
+        throw new Error('Недостаточно свободных мест для выбора');
+      }
+
+      await seat.click();
+      await seat.dispose();
+    }
+
     await this.page.waitForFunction(
-      (selector, expected) => document.querySelectorAll(selector).length === expected,
-      {}, this.selectors.selectedSeat, count
+      (selector, expected) =>
+        document.querySelectorAll(selector).length === expected,
+      {},
+      this.selectors.selectedSeat,
+      count
     );
   }
 
   async confirmSeats() {
     await this.page.waitForFunction(
-      selector => {
+      (selector) => {
         const button = document.querySelector(selector);
-        return button && !button.disabled;
+        return Boolean(button && !button.disabled);
       },
-      {}, this.selectors.confirm
+      {},
+      this.selectors.confirm
     );
+
     await this.page.click(this.selectors.confirm);
     await this.page.waitForSelector(this.selectors.ticket, { visible: true });
   }
 
   async isBookingPage() {
-    return Boolean(await this.page.$(this.selectors.ticket));
+    return this.page
+      .$eval(this.selectors.ticket, (element) => {
+        const style = window.getComputedStyle(element);
+        return (
+          !element.hidden &&
+          style.display !== 'none' &&
+          style.visibility !== 'hidden'
+        );
+      })
+      .catch(() => false);
   }
 
   async getSelectedSeatCount() {
-    const text = await this.page.$eval(this.selectors.ticketSeats, el => el.textContent.trim());
-    // На экране билета места перечислены как "ряд/место, ряд/место".
-    const matches = text.match(/\d+\s*\/\s*\d+/g);
-    if (matches) return matches.length;
-    return text.split(/[,;]/).map(s => s.trim()).filter(Boolean).length;
+    const text = await this.page
+      .$eval(this.selectors.ticketSeats, (element) =>
+        element.textContent.trim()
+      )
+      .catch(() => '');
+
+    const seatNumbers = text.match(/\d+\s*\/\s*\d+/g);
+    if (seatNumbers) return seatNumbers.length;
+
+    return text
+      .split(/[,;]/)
+      .map((seat) => seat.trim())
+      .filter(Boolean).length;
   }
 
   async unavailableSeatIsNotSelectable() {
-    const occupied = await this.page.$(this.selectors.takenSeat);
-    if (!occupied) throw new Error('В выбранном сеансе нет занятого места');
-    const before = await this.page.$$(this.selectors.selectedSeat);
-    if (before.length) throw new Error('Негативный тест требует пустого выбора мест');
-    // Клик мышью по координатам, а не ElementHandle.click() по неинтерактивному месту.
-    const box = await occupied.boundingBox();
-    if (!box) throw new Error('Занятое место не видно');
-    await this.page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    const selected = await this.page.$$(this.selectors.selectedSeat);
-    const takenIsSelected = await occupied.evaluate(el => el.classList.contains('buying-scheme__chair_selected'));
-    const confirmEnabled = await this.page.$eval(
-      this.selectors.confirm, button => !button.disabled
+    const occupiedSeat = await this.page.$(this.selectors.takenSeat);
+    if (!occupiedSeat) {
+      throw new Error('В выбранном сеансе нет занятого места');
+    }
+
+    const box = await occupiedSeat.boundingBox();
+    if (!box) throw new Error('Занятое место не отображается на экране');
+
+    await this.page.mouse.click(
+      box.x + box.width / 2,
+      box.y + box.height / 2
     );
-    return selected.length === 0 && !takenIsSelected && !confirmEnabled;
+
+    return this.page.evaluate(
+      ({ takenSelector, selectedSelector, confirmSelector }) => {
+        const occupied = document.querySelector(takenSelector);
+        const confirmButton = document.querySelector(confirmSelector);
+        const selectedCount = document.querySelectorAll(selectedSelector).length;
+
+        return Boolean(
+          occupied &&
+          confirmButton &&
+          selectedCount === 0 &&
+          !occupied.classList.contains('buying-scheme__chair_selected') &&
+          confirmButton.disabled
+        );
+      },
+      {
+        takenSelector: this.selectors.takenSeat,
+        selectedSelector: this.selectors.selectedSeat,
+        confirmSelector: this.selectors.confirm
+      }
+    );
   }
 }
 
