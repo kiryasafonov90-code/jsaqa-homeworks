@@ -34,37 +34,23 @@ jobs:
         run: npm install
       - name: Install Chrome for Puppeteer
         run: npx puppeteer browsers install chrome
-      - name: Start local cinema fixture
+      - name: Run both suites twice headless and once headed on local fixture
         env:
           BASE_URL: http://127.0.0.1:8765/index.html
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures >/tmp/cinema-test-server.log 2>&1 &
           SERVER_PID=$!
-          echo "$SERVER_PID" > /tmp/cinema-test-server.pid
+          trap 'kill "$SERVER_PID" || true' EXIT
           for attempt in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8765/index.html >/dev/null; then
-              exit 0
+              break
             fi
             sleep 1
           done
-          cat /tmp/cinema-test-server.log
-          exit 1
-      - name: Run Puppeteer and Cucumber twice in headless mode
-        env:
-          BASE_URL: http://127.0.0.1:8765/index.html
-        run: |
+          curl -fsS http://127.0.0.1:8765/index.html >/dev/null
           npm test
           npm test
-      - name: Run Puppeteer and Cucumber in headed mode
-        env:
-          BASE_URL: http://127.0.0.1:8765/index.html
-        run: xvfb-run -a env HEADLESS=false npm test
-      - name: Stop local cinema fixture
-        if: always()
-        run: |
-          if [ -f /tmp/cinema-test-server.pid ]; then
-            kill "$(cat /tmp/cinema-test-server.pid)" || true
-          fi
+          xvfb-run -a env HEADLESS=false npm test
       - name: Run against the live cinema stand
         if: github.event_name == 'workflow_dispatch' && inputs.live
         run: npm test
