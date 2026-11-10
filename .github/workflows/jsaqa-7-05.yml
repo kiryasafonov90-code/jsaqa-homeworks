@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       live:
-        description: "Also run on live qamid.tmweb.ru (requires website access)"
+        description: "Also run against the live qamid.tmweb.ru stand"
         required: false
         default: false
         type: boolean
@@ -34,13 +34,37 @@ jobs:
         run: npm install
       - name: Install Chrome for Puppeteer
         run: npx puppeteer browsers install chrome
-      - name: Run both suites twice on local fixture with 12 occupied seats
+      - name: Start local cinema fixture
         env:
           BASE_URL: http://127.0.0.1:8765/index.html
         run: |
           python3 -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures >/tmp/cinema-test-server.log 2>&1 &
+          SERVER_PID=$!
+          echo "$SERVER_PID" > /tmp/cinema-test-server.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8765/index.html >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/cinema-test-server.log
+          exit 1
+      - name: Run Puppeteer and Cucumber twice in headless mode
+        env:
+          BASE_URL: http://127.0.0.1:8765/index.html
+        run: |
           npm test
           npm test
-      - name: Run live cinema tests (opt-in)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.live }}
+      - name: Run Puppeteer and Cucumber in headed mode
+        env:
+          BASE_URL: http://127.0.0.1:8765/index.html
+        run: xvfb-run -a env HEADLESS=false npm test
+      - name: Stop local cinema fixture
+        if: always()
+        run: |
+          if [ -f /tmp/cinema-test-server.pid ]; then
+            kill "$(cat /tmp/cinema-test-server.pid)" || true
+          fi
+      - name: Run against the live cinema stand
+        if: github.event_name == 'workflow_dispatch' && inputs.live
         run: npm test
