@@ -1,0 +1,50 @@
+name: JSAQA 7-05 Puppeteer and Cucumber
+
+on:
+  pull_request:
+    paths:
+      - "7-05/**"
+      - ".github/workflows/jsaqa-7-05.yml"
+  workflow_dispatch:
+    inputs:
+      live:
+        description: "Also run against the live qamid.tmweb.ru stand"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: 7-05
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Install Chrome for Puppeteer
+        run: npx puppeteer browsers install chrome
+      - name: Run both suites headless and headed on local fixture
+        env:
+          BASE_URL: http://127.0.0.1:8765/index.html
+        run: |
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory tests/fixtures >/tmp/cinema-test-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8765/index.html >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          npm run test:all
+          xvfb-run -a env HEADLESS=false npm run test:all
+      - name: Run against the live cinema stand
+        if: github.event_name == 'workflow_dispatch' && inputs.live
+        run: npm run test:all
